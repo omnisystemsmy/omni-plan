@@ -321,12 +321,12 @@ class BillingService extends ChangeNotifier {
           _log('missing products: ${missing.join(', ')}');
         }
       }
-    } catch (e) {
+    } catch (e, st) {
       // The query failed: Play is there, but did not give the products.
       _problem = _storeAvailable
           ? StoreProblem.queryFailed
           : StoreProblem.billingUnavailable;
-      _log('product query failed: ${_gateway.lastProblem ?? e.runtimeType}');
+      _log('product query failed: ${_gateway.lastProblem ?? e.runtimeType}\n$e\n$st');
       _plansByKind.clear();
     } finally {
       _loading = false;

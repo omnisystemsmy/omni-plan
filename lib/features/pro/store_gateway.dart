@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
@@ -125,7 +126,16 @@ class PlayStoreGateway implements StoreGateway {
 
   @override
   Future<List<StoreProduct>> products(Set<String> ids) async {
-    final response = await _iap.queryProductDetails(ids);
+    final ProductDetailsResponse response;
+    try {
+      response = await _iap.queryProductDetails(ids);
+    } catch (e, st) {
+      // An exception inside the plugin (for example while it parses the
+      // product details): keep the exception and where it was thrown.
+      _diag('queryProductDetails threw ${e.runtimeType}: $e\n$st');
+      rethrow;
+    }
+    _logResponse(ids, response);
     final err = response.error;
     _problem = err == null ? null : '${err.source} ${err.code}: ${err.message}';
     _missing = {
@@ -135,7 +145,12 @@ class PlayStoreGateway implements StoreGateway {
     if (err != null) throw StateError(_problem!);
     final out = <StoreProduct>[];
     for (final id in ids) {
-      final options = response.productDetails.where((d) => d.id == id).toList();
+      // The plugin's list is a List<GooglePlayProductDetails> at run time, so
+      // copy into a List<ProductDetails>: firstWhere's orElse below returns
+      // a ProductDetails, which the narrower list's firstWhere rejects.
+      final options = List<ProductDetails>.of(
+        response.productDetails.where((d) => d.id == id),
+      );
       if (options.isEmpty) continue;
       // The base plan is the one without an offer id.
       var chosen = options.firstWhere(
@@ -176,6 +191,55 @@ class PlayStoreGateway implements StoreGateway {
     }
     return out;
   }
+
+  // --- Diagnostics: logging only, nothing here changes what is returned. ---
+
+  void _diag(String message) => debugPrint('[OmniBilling] $message');
+
+  /// What the plugin returned for a product query. Product metadata only: no
+  /// offer tokens, purchase tokens or account data. Nullable fields are
+  /// printed as `null` rather than assumed.
+  void _logResponse(Set<String> ids, ProductDetailsResponse response) {
+    final err = response.error;
+    if (err != null) {
+      _diag(
+        'query error: source=${err.source} code=${err.code} '
+        'message=${err.message} details=${err.details}',
+      );
+    }
+    _diag(
+      'query ids=${ids.join(',')} returned=${response.productDetails.length} '
+      'notFound=${response.notFoundIDs.join(',')}',
+    );
+    for (final d in response.productDetails) {
+      if (d is! GooglePlayProductDetails) {
+        _diag('product ${d.id}: price=${d.price} (${d.runtimeType})');
+        continue;
+      }
+      final w = d.productDetails;
+      final i = d.subscriptionIndex;
+      final offers = w.subscriptionOfferDetails;
+      final offer = offers != null && i != null && i < offers.length
+          ? offers[i]
+          : null;
+      final sub = offer == null
+          ? 'subIndex=$i'
+          : 'subIndex=$i basePlan=${offer.basePlanId} '
+                'offer=${offer.offerId ?? 'base'} '
+                'tags=${offer.offerTags.join('/')} '
+                'phases=${_phaseText(offer.pricingPhases)}';
+      _diag(
+        'product ${d.id}: type=${w.productType.name} price=${d.price} $sub '
+        'subOffers=${offers?.length ?? 'null'} '
+        'oneTime=${w.oneTimePurchaseOfferDetails?.formattedPrice ?? 'null'} '
+        'oneTimeOptions=${w.oneTimePurchaseOfferDetailsList?.length ?? 'null'}',
+      );
+    }
+  }
+
+  String _phaseText(List<PricingPhaseWrapper> phases) => phases
+      .map((p) => '${p.formattedPrice}/${p.billingPeriod}x${p.billingCycleCount}')
+      .join(';');
 
   String? _offerId(GooglePlayProductDetails d) {
     final offers = d.productDetails.subscriptionOfferDetails;
