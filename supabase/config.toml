@@ -1,0 +1,13 @@
+# Omni Plan backend. The project is the shared Omni Apps project; only objects
+# prefixed `plan_` belong to Omni Plan.
+project_id = "omni-plan"
+
+# Off because this project signs tokens with asymmetric keys, which the gateway's
+# legacy check can reject. The function verifies the token itself (getUser).
+[functions.plan-billing]
+verify_jwt = false
+
+# Google Pub/Sub cannot send a Supabase JWT. The function checks its own
+# shared secret instead.
+[functions.play-rtdn]
+verify_jwt = false

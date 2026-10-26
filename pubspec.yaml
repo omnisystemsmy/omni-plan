@@ -1,0 +1,61 @@
+name: omni_plan
+description: "Omni Plan - ready-to-use planning and project management."
+publish_to: 'none'
+
+version: 1.0.1+2
+
+environment:
+  sdk: ^3.13.3
+
+# Same stack as Omni Docs: Provider for state, Hive for on-device data,
+# Supabase for the shared Omni identity and Pro verification.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.5+1
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.6
+  shared_preferences: ^2.5.6
+  flutter_secure_storage: ^10.0.0
+  uuid: ^4.6.0
+  intl: ^0.20.3
+  pdf: ^3.11.3
+  share_plus: ^12.0.1
+  supabase_flutter: ^2.18.3
+  file_picker: ^8.3.7
+  in_app_purchase: ^3.3.1
+  in_app_purchase_android: ^0.5.5
+  url_launcher: ^6.3.3
+  flutter_local_notifications: ^19.4.2
+  timezone: ^0.10.1
+  # Pinned: pdf 3.12 (needed next to flutter_local_notifications) caps
+  # archive below 4.1, and image 4.11+ calls an archive 4.1 API.
+  image: ">=4.8.0 <4.11.0"
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/fonts/
+    - assets/images/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+
